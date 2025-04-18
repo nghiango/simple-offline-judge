@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Offline Judge</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Offline Judge</h1>
+        <form id="judge-form">
+            <label for="lang">Language:</label>
+            <select id="lang" name="lang">
+                <option value="java">Java</option>
+            </select>
+            <label for="code">Your Code:</label>
+            <textarea id="code" name="code" rows="12" cols="60" placeholder="Paste your code here..."></textarea>
+            <label for="input">Input (.in):</label>
+            <textarea id="input" name="input" rows="5" cols="60" placeholder="Paste your input here..."></textarea>
+            <label for="output">Expected Output (.out):</label>
+            <textarea id="output" name="output" rows="5" cols="60" placeholder="Paste your expected output here..."></textarea>
+            <button type="submit">Judge</button>
+        </form>
+        <div id="result"></div>
+    </div>
+    <script src="/static/main.js"></script>
+</body>
+</html>
