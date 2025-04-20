@@ -161,7 +161,12 @@
             <!-- Result/Feedback Area -->
             <section id="result-section" class="panel result-section" style="display:none">
                 <h2 class="panel-title">Results</h2>
-                <div id="result" class="result-content"></div>
+                <!-- Loader spinner will be injected here when needed -->
+                <div id="result" class="result-content" style="display:none"></div>
+<div id="result-loading" style="display:none; text-align:center;">
+  <div class="loader" style="margin-bottom:14px;"></div>
+  <div style="color:#1976d2;font-weight:600;font-size:1.12em;letter-spacing:0.01em;">Judging...</div>
+</div>
             </section>
         </main>
         
@@ -241,15 +246,20 @@
         // Clear all uploaded batch files
         document.getElementById('clear-batch-btn').onclick = function() {
             document.getElementById('batch-filename').textContent = '';
-            document.getElementById('batch-testcases').innerHTML = '';
+            // Only clear options and hide, do not remove elements
+            var select = document.getElementById('batch-case-select');
+            if (select) {
+                select.innerHTML = '';
+                select.style.display = 'none';
+            }
+            var label = document.getElementById('batch-case-label');
+            if (label) label.style.display = 'none';
+            var runBtn = document.getElementById('run-batch-btn');
+            if (runBtn) runBtn.style.display = 'none';
             document.getElementById('batch-info').style.display = 'none';
             document.getElementById('input').value = '';
             document.getElementById('output').value = '';
             document.getElementById('batch-folder').value = '';
-            // Hide Judge All and batch selectors
-            document.getElementById('run-batch-btn').style.display = 'none';
-            document.getElementById('batch-case-select').style.display = 'none';
-            document.getElementById('batch-case-label').style.display = 'none';
         };
         // Batch folder upload logic
         document.getElementById('batch-folder').onchange = function(e) {
@@ -328,6 +338,13 @@
         };
         // Run all batch cases logic
         document.getElementById('run-batch-btn').onclick = async function() {
+            var judgeBtn = document.getElementById('judge-btn');
+            var runBatchBtn = document.getElementById('run-batch-btn');
+            if (judgeBtn) judgeBtn.disabled = true;
+            if (runBatchBtn) runBatchBtn.disabled = true;
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('result-loading').style.display = 'block';
+            document.getElementById('result-section').style.display = 'block';
             const testcases = window._batchTestcases || {};
             const code = window.codeEditor ? window.codeEditor.getValue() : document.getElementById('code').value;
             const lang = document.getElementById('lang') ? document.getElementById('lang').value : 'java';
@@ -354,7 +371,6 @@
                     results.push({ name: base, result: 'Error: ' + err });
                 }
             }
-            document.getElementById('result-section').style.display = 'block';
             // Show summary table
             let html = '<table class="batch-result-table"><tr><th>Case</th><th>Result</th></tr>';
             results.forEach(r => {
@@ -362,6 +378,10 @@
             });
             html += '</table>';
             document.getElementById('result').innerHTML = html;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result-loading').style.display = 'none';
+            if (judgeBtn) judgeBtn.disabled = false;
+            if (runBatchBtn) runBatchBtn.disabled = false;
         };
         // Code file upload logic
         document.getElementById('code-file').onchange = function(e) {
