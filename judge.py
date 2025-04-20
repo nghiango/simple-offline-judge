@@ -37,7 +37,7 @@ def run_java(class_name, input_path):
     except subprocess.TimeoutExpired:
         return False, 'Time Limit Exceeded', TIME_LIMIT
 
-def judge(problem, submission):
+def judge(problem, submission, mode):
     print(f'Judging {submission} on problem {problem}')
     base_name = os.path.splitext(submission)[0]
     java_file = os.path.join(SUBMISSIONS_DIR, submission)
@@ -59,37 +59,51 @@ def judge(problem, submission):
             # Read input lines for this testcase
             with open(input_path, 'r') as f:
                 input_lines = [line.rstrip('\n') for line in f.readlines()]
-            ok, output, elapsed = run_java(base_name, input_path)
-            if not ok:
-                print(f'Testcase {idx}: Runtime Error / {output.strip()}')
+            if mode == 'single':
+                # Run Java program once per input line
+                aggregated_outputs = []
+                elapsed_total = 0.0
+                for single_input in input_lines:
+                    import tempfile
+                    with tempfile.NamedTemporaryFile('w+', delete=False) as tmpin:
+                        tmpin.write(single_input + '\n')
+                        tmpin.flush()
+                        ok, output, elapsed = run_java(base_name, tmpin.name)
+                        elapsed_total += elapsed
+                        if not ok:
+                            aggregated_outputs.append(f'Runtime Error: {output.strip()}')
+                        else:
+                            aggregated_outputs.append(output.strip())
+                actual = '\n'.join(aggregated_outputs)
             else:
-                actual = output.strip()
-                # Split expected and actual output into lines for subcase checking
-                expected_lines = expected.strip().split('\n')
-                actual_lines = actual.strip().split('\n')
-                max_len = max(len(expected_lines), len(actual_lines))
-                all_passed = True
-                for i in range(max_len):
-                    exp = expected_lines[i] if i < len(expected_lines) else ''
-                    act = actual_lines[i] if i < len(actual_lines) else ''
-                    # For each subcase, input consists of two lines: lines 2*i and 2*i+1
-                    input1 = input_lines[2*i] if 2*i < len(input_lines) else ''
-                    input2 = input_lines[2*i+1] if 2*i+1 < len(input_lines) else ''
-                    input_pair = f'{input1}\n{input2}' if input2 else input1
-                    if exp == act:
-                        print(f'Testcase {idx} - Subcase {i+1}: Accepted')
-                    else:
-                        print(f'Testcase {idx} - Subcase {i+1}: Wrong Answer')
-                        print(f'  Input:')
-                        for line in input_pair.split('\n'):
-                            print(f'    {line}')
-                        print(f'  Expected: {exp}')
-                        print(f'  Actual:   {act}')
-                        all_passed = False
-                if all_passed:
-                    print(f'Testcase {idx}: Accepted ({elapsed:.2f}s)')
+                # Block mode: run once for whole input
+                ok, output, elapsed_total = run_java(base_name, input_path)
+                if not ok:
+                    actual = f'Runtime Error: {output.strip()}'
                 else:
-                    print(f'Testcase {idx}: Some subcases failed ({elapsed:.2f}s)')
+                    actual = output.strip()
+            # Split expected and actual output into lines for subcase checking
+            expected_lines = expected.strip().split('\n')
+            actual_lines = actual.strip().split('\n')
+            max_len = max(len(expected_lines), len(actual_lines))
+            all_passed = True
+            for i in range(max_len):
+                exp = expected_lines[i] if i < len(expected_lines) else ''
+                act = actual_lines[i] if i < len(actual_lines) else ''
+                input1 = input_lines[i] if i < len(input_lines) else ''
+                if exp == act:
+                    print(f'Testcase {idx} - Subcase {i+1}: Accepted')
+                else:
+                    print(f'Testcase {idx} - Subcase {i+1}: Wrong Answer')
+                    print(f'  Input:')
+                    print(f'    {input1}')
+                    print(f'  Expected: {exp}')
+                    print(f'  Actual:   {act}')
+                    all_passed = False
+            if all_passed:
+                print(f'Testcase {idx}: Accepted ({elapsed_total:.2f}s)')
+            else:
+                print(f'Testcase {idx}: Some subcases failed ({elapsed_total:.2f}s)')
     finally:
         # Remove the compiled class file if it exists
         if os.path.exists(class_file):
@@ -112,7 +126,12 @@ def main():
         print(f'{i+1}. {s}')
     sidx = int(input('Select submission: ')) - 1
     submission = submissions[sidx]
-    judge(problem, submission)
+    print('Judge modes:')
+    print('1. single (run once per input line)')
+    print('2. block (run once for whole input)')
+    mode_idx = int(input('Select judge mode: '))
+    mode = 'single' if mode_idx == 1 else 'block'
+    judge(problem, submission, mode)
 
 if __name__ == '__main__':
     main()

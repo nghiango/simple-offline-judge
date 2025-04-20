@@ -21,14 +21,25 @@ def run_code():
     result = ''
     with tempfile.TemporaryDirectory() as tempdir:
         if lang == 'java':
+            mode = request.form.get('mode', 'single')
             code_file = os.path.join(tempdir, 'Main.java')
             with open(code_file, 'w') as f:
                 f.write(code)
             compile_proc = subprocess.run(['javac', code_file], capture_output=True, text=True)
             if compile_proc.returncode != 0:
                 return jsonify({'result': 'Compilation Error:\n' + compile_proc.stderr})
-            run_proc = subprocess.run(['java', '-cp', tempdir, 'Main'], input=input_data, capture_output=True, text=True, timeout=2)
-            actual_output = run_proc.stdout.strip()
+            if mode == 'single':
+                # Run Java program once per input line
+                input_lines = input_data.strip().split('\n')
+                aggregated_outputs = []
+                for single_input in input_lines:
+                    run_proc = subprocess.run(['java', '-cp', tempdir, 'Main'], input=single_input + '\n', capture_output=True, text=True, timeout=2)
+                    aggregated_outputs.append(run_proc.stdout.strip())
+                actual_output = '\n'.join(aggregated_outputs)
+            else:
+                # Block mode: run once for all input
+                run_proc = subprocess.run(['java', '-cp', tempdir, 'Main'], input=input_data, capture_output=True, text=True, timeout=2)
+                actual_output = run_proc.stdout.strip()
         else:
             return jsonify({'result': 'Only Java is supported in this demo.'})
         # Compare output line by line
