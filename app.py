@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import subprocess
 import os
 import tempfile
+import re
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -22,23 +23,29 @@ def run_code():
     with tempfile.TemporaryDirectory() as tempdir:
         if lang == 'java':
             mode = request.form.get('mode', 'single')
-            code_file = os.path.join(tempdir, 'Main.java')
-            with open(code_file, 'w') as f:
+            # Extract public class name
+            class_match = re.search(r'public\s+class\s+(\w+)', code)
+            class_name = class_match.group(1) if class_match else 'Main'
+            # Save code to temp file with correct class name
+            code_path = os.path.join(tempdir, f'{class_name}.java')
+            with open(code_path, 'w') as f:
                 f.write(code)
-            compile_proc = subprocess.run(['javac', code_file], capture_output=True, text=True)
+            # Compile
+            compile_proc = subprocess.run(['javac', code_path], capture_output=True, text=True)
             if compile_proc.returncode != 0:
                 return jsonify({'result': 'Compilation Error:\n' + compile_proc.stderr})
+            # Run
             if mode == 'single':
                 # Run Java program once per input line
                 input_lines = input_data.strip().split('\n')
                 aggregated_outputs = []
                 for single_input in input_lines:
-                    run_proc = subprocess.run(['java', '-cp', tempdir, 'Main'], input=single_input + '\n', capture_output=True, text=True, timeout=2)
+                    run_proc = subprocess.run(['java', '-cp', tempdir, class_name], input=single_input + '\n', capture_output=True, text=True, timeout=2)
                     aggregated_outputs.append(run_proc.stdout.strip())
                 actual_output = '\n'.join(aggregated_outputs)
             else:
                 # Block mode: run once for all input
-                run_proc = subprocess.run(['java', '-cp', tempdir, 'Main'], input=input_data, capture_output=True, text=True, timeout=2)
+                run_proc = subprocess.run(['java', '-cp', tempdir, class_name], input=input_data, capture_output=True, text=True, timeout=2)
                 actual_output = run_proc.stdout.strip()
         else:
             return jsonify({'result': 'Only Java is supported in this demo.'})
